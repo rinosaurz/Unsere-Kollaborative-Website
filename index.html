@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsere Kollaborative Website</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/x-icon" href="icontoothless.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .drawing-canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            cursor: crosshair;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .drawing-canvas:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tool-button {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tool-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tool-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .color-swatch.selected {
+            border-color: #374151;
+            transform: scale(1.1);
+        }
+        
+        .text-area {
+            resize: none;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+        
+        .text-area:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .user-indicator {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            pointer-events: none;
+            transition: all 0.1s ease;
+        }
+        
+        .collaboration-panel {
+            background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        .brush-preview {
+            border-radius: 50%;
+            background: currentColor;
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white p-4 shadow-lg">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 2h12v11H4V4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">Zaros und Rinos Gemeinsame Website</h1>
+                    <p class="text-sm opacity-90">Hi Zaro, so since you help me with my Deutsch lessons, I thought that I'll also make something for you. I hope this web works just fine. We can collaborate and *hopefully* text here</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 bg-green-400 rounded-full pulse-animation"></div>
+                    <span class="text-sm">Live Session</span>
+                </div>
+                <div class="text-sm bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                    <span id="userCount"></span> users online
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto p-4 space-y-6">
+        <!-- Tools Panel -->
+        <div class="collaboration-panel p-4">
+            <h3 class="text-lg font-semibold mb-4">Drawing Tools</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <!-- Drawing Tools -->
+                <div class="space-y-3">
+                    <h4 class="font-medium text-gray-700">Brush Tools</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="tool-button active bg-white border border-gray-200 p-3" data-tool="brush">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 2h12v11H4V4z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        <button class="tool-button bg-white border border-gray-200 p-3" data-tool="eraser">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8.707 7.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414L11 7.586V3a1 1 0 10-2 0v4.586l-.293-.293z"/>
+                                <path d="M3 5a2 2 0 012-2h1a1 1 0 010 2H5v7h2l1 2h4l1-2h2V5h-1a1 1 0 110-2h1a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Colors -->
+                <div class="space-y-3">
+                    <h4 class="font-medium text-gray-700">Colors</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <div class="color-swatch selected" style="background-color: #000000" data-color="#000000"></div>
+                        <div class="color-swatch" style="background-color: #ef4444" data-color="#ef4444"></div>
+                        <div class="color-swatch" style="background-color: #3b82f6" data-color="#3b82f6"></div>
+                        <div class="color-swatch" style="background-color: #10b981" data-color="#10b981"></div>
+                        <div class="color-swatch" style="background-color: #f59e0b" data-color="#f59e0b"></div>
+                        <div class="color-swatch" style="background-color: #8b5cf6" data-color="#8b5cf6"></div>
+                        <div class="color-swatch" style="background-color: #ec4899" data-color="#ec4899"></div>
+                        <div class="color-swatch" style="background-color: #6b7280" data-color="#6b7280"></div>
+                    </div>
+                    <input type="color" id="customColor" class="w-full h-10 rounded-lg border-0 cursor-pointer">
+                </div>
+
+                <!-- Brush Size -->
+                <div class="space-y-3">
+                    <h4 class="font-medium text-gray-700">Brush Size</h4>
+                    <div class="space-y-2">
+                        <input type="range" id="brushSize" min="1" max="50" value="5" class="w-full">
+                        <div class="flex items-center justify-between text-sm text-gray-600">
+                            <span>1px</span>
+                            <div id="brushPreview" class="brush-preview" style="width: 10px; height: 10px; background: #000000;"></div>
+                            <span>50px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="space-y-3">
+                    <h4 class="font-medium text-gray-700">Actions</h4>
+                    <div class="space-y-2">
+                        <button id="clearCanvas" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors">
+                            Clear Canvas
+                        </button>
+                        <button id="saveCanvas" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors">
+                            Save Image
+                        </button>
+                        <button id="shareSession" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors">
+                            Share Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Canvas and Text Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Drawing Canvas -->
+            <div class="lg:col-span-2 space-y-4">
+                <div class="collaboration-panel p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Drawing Canvas</h3>
+                        <div class="flex items-center space-x-2 text-sm text-gray-600">
+                            <!-- This will be dynamically updated or removed if no other users -->
+                            <div id="drawingUserIndicator" class="w-2 h-2 bg-blue-400 rounded-full hidden"></div>
+                            <span id="drawingUserName"></span>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <canvas id="drawingCanvas" class="drawing-canvas w-full" width="800" height="600"></canvas>
+                        <div id="userCursors" class="absolute inset-0 pointer-events-none"></div>
+                    </div>
+                </div>
+
+                <!-- Quick Notes -->
+                <div class="collaboration-panel p-4">
+                    <h3 class="text-lg font-semibold mb-4">Quick Notes</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Idea Board</label>
+                            <textarea id="ideaBoard" class="text-area w-full h-24 p-3" placeholder="Jot down your thoughts or anything here..."></textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">To-Do List</label>
+                            <textarea id="todoList" class="text-area w-full h-24 p-3" placeholder="• Task 1&#10;• Task 2&#10;• Task 3"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collaborative Text Area -->
+            <div class="space-y-4">
+                <div class="collaboration-panel p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Collaborative Document</h3>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-6 h-6 bg-green-400 rounded-full border-2 border-white text-xs text-white flex items-center justify-center">R</div>
+                        </div>
+                    </div>
+                    <textarea id="collaborativeText" class="text-area w-full h-80 p-4 text-sm leading-relaxed" placeholder="You can type to collaborate with me in real-time...
+
+This is a shared document where we can contribute ideas, draw, take notes, or just anything, feel free to use it to your heart's content...
+
+Feel free to:
+• Add your thoughts
+• Create lists and outlines
+• Share feedback
+• Or just anything you want, i build this website for you after all
+
+Happy collaborating!"></textarea>
+                </div>
+
+                <!-- Chat Panel -->
+                <div class="collaboration-panel p-4">
+                    <h3 class="text-lg font-semibold mb-4">Our Little Chat</h3>
+                    <div id="chatMessages" class="h-48 overflow-y-auto space-y-2 mb-4 p-2 bg-gray-50 rounded-lg">
+                        <div class="flex items-start space-x-2">
+                            <div class="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-xs text-white">R</div>
+                            <div class="bg-white p-2 rounded-lg text-sm">
+                                <div class="font-medium text-xs text-gray-500">Rino</div>
+                                <div>Hi Teh, so we can write here to each other. Actually I was bored as hell and just wanted to make something for you too since I've only received soo much from you. I wish you the happiest day though!</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <input type="text" id="chatInput" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400">
+                        <button id="sendMessage" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="collaboration-panel p-4">
+            <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+            <div id="activityFeed" class="space-y-3">
+                <!-- Initial activity items removed, will be dynamically added -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userName = localStorage.getItem('userName');
+        if (!userName) {
+            userName = prompt('Please enter your name to join the session:');
+            if (userName) {
+                localStorage.setItem('userName', userName);
+            } else {
+                userName = 'Guest'; // Default if user cancels or enters nothing
+                localStorage.setItem('userName', userName);
+            }
+        }
+
+        // Canvas Setup
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Drawing state
+        let isDrawing = false;
+        let currentTool = 'brush';
+        let currentColor = '#000000';
+        let currentSize = 5;
+        let lastX = 0;
+        let lastY = 0;
+        
+        // Set canvas size
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = rect.height * 2;
+            ctx.scale(2, 2);
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = (e.clientX || e.touches[0].clientX) - rect.left;
+            lastY = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            if (currentTool === 'circle') {
+                // Start circle drawing
+                return;
+            }
+            
+            ctx.globalCompositeOperation = currentTool === 'eraser' ? 'destination-out' : 'source-over';
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = (e.clientX || e.touches[0].clientX) - rect.left;
+            const currentY = (e.clientY || e.touches[0].clientY) - rect.top;
+            
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = currentSize;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            if (currentTool === 'brush' || currentTool === 'eraser') {
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(currentX, currentY);
+            } else if (currentTool === 'line') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                redrawCanvas();
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+            }
+            
+            // Simulate real-time collaboration
+            // addActivityFeedItem(userName, 'drawing with ' + currentTool); // This will be handled by the actual drawing event
+        }
+        
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+            ctx.beginPath();
+            saveCanvasState();
+            addActivityFeedItem(userName, 'finished drawing with ' + currentTool); // Add activity when drawing stops
+        }
+        
+        // Canvas state management
+        let canvasHistory = [];
+        let historyStep = -1;
+        
+        function saveCanvasState() {
+            historyStep++;
+            if (historyStep < canvasHistory.length) {
+                canvasHistory.length = historyStep;
+            }
+            canvasHistory.push(canvas.toDataURL());
+        }
+        
+        function redrawCanvas() {
+            if (historyStep >= 0 && canvasHistory[historyStep]) {
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = canvasHistory[historyStep];
+            }
+        }
+        
+        // Event listeners for canvas
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startDrawing(e);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            draw(e);
+        });
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopDrawing();
+        });
+        
+        // Tool selection
+        document.querySelectorAll('.tool-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tool-button').forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+                currentTool = button.dataset.tool;
+                canvas.style.cursor = currentTool === 'eraser' ? 'grab' : 'crosshair';
+                addActivityFeedItem(userName, 'switched to ' + currentTool + ' tool');
+            });
+        });
+        
+        // Color selection
+        document.querySelectorAll('.color-swatch').forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+                currentColor = swatch.dataset.color;
+                updateBrushPreview();
+                addActivityFeedItem(userName, 'changed brush color to ' + currentColor);
+            });
+        });
+        
+        // Custom color picker
+        document.getElementById('customColor').addEventListener('change', (e) => {
+            currentColor = e.target.value;
+            document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+            updateBrushPreview();
+            addActivityFeedItem(userName, 'selected a custom brush color');
+        });
+        
+        // Brush size
+        const brushSizeSlider = document.getElementById('brushSize');
+        const brushPreview = document.getElementById('brushPreview');
+        
+        brushSizeSlider.addEventListener('input', (e) => {
+            currentSize = e.target.value;
+            updateBrushPreview();
+        });
+        brushSizeSlider.addEventListener('change', () => { // Add activity when brush size is set
+            addActivityFeedItem(userName, 'set brush size to ' + currentSize + 'px');
+        });
+        
+        function updateBrushPreview() {
+            brushPreview.style.width = Math.max(5, currentSize) + 'px';
+            brushPreview.style.height = Math.max(5, currentSize) + 'px';
+            brushPreview.style.background = currentColor;
+        }
+        
+        // Canvas actions
+        document.getElementById('clearCanvas').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the canvas?')) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                saveCanvasState();
+                addActivityFeedItem(userName, 'cleared the canvas');
+            }
+        });
+        
+        document.getElementById('saveCanvas').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'collaborative-canvas-' + new Date().toISOString().slice(0, 10) + '.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            addActivityFeedItem(userName, 'saved the canvas as an image');
+        });
+        
+        document.getElementById('shareSession').addEventListener('click', () => {
+            const sessionUrl = window.location.href + '?session=' + Math.random().toString(36).substr(2, 9);
+            navigator.clipboard.writeText(sessionUrl).then(() => {
+                alert('Session link copied to clipboard!\n\n' + sessionUrl);
+                addActivityFeedItem(userName, 'shared the session link');
+            });
+        });
+        
+        // Chat functionality
+        const chatInput = document.getElementById('chatInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const sendButton = document.getElementById('sendMessage');
+        
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex items-start space-x-2';
+                messageDiv.innerHTML = `
+                    <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white">${userName.charAt(0).toUpperCase()}</div>
+                    <div class="bg-white p-2 rounded-lg text-sm">
+                        <div class="font-medium text-xs text-gray-500">${userName} • now</div>
+                        <div>${message}</div>
+                    </div>
+                `;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                chatInput.value = '';
+                addActivityFeedItem(userName, 'sent a message in chat');
+            }
+        }
+        
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Text area auto-save
+        const textAreas = ['collaborativeText', 'ideaBoard', 'todoList'];
+        textAreas.forEach(id => {
+            const element = document.getElementById(id);
+            element.addEventListener('input', () => {
+                localStorage.setItem(id, element.value);
+                addActivityFeedItem(userName, 'updated the ' + id.replace(/([A-Z])/g, ' $1').toLowerCase());
+            });
+            
+            // Load saved content
+            const saved = localStorage.getItem(id);
+            if (saved) {
+                element.value = saved;
+            }
+        });
+        
+        // Activity feed
+        function addActivityFeedItem(user, action) {
+            const feed = document.getElementById('activityFeed');
+            const item = document.createElement('div');
+            item.className = 'flex items-center space-x-3 text-sm text-gray-600';
+            
+            let iconHtml = '';
+            let bgColor = 'bg-blue-100';
+            let iconColor = 'text-blue-600';
+
+            if (action.includes('drawing') || action.includes('canvas')) {
+                iconHtml = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v11a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 2h12v11H4V4z" clip-rule="evenodd"/></svg>`;
+                bgColor = 'bg-blue-100';
+                iconColor = 'text-blue-600';
+            } else if (action.includes('document') || action.includes('notes')) {
+                iconHtml = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>`;
+                bgColor = 'bg-green-100';
+                iconColor = 'text-green-600';
+            } else if (action.includes('joined') || action.includes('session')) {
+                iconHtml = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>`;
+                bgColor = 'bg-purple-100';
+                iconColor = 'text-purple-600';
+            } else if (action.includes('chat')) {
+                iconHtml = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd"/></svg>`;
+                bgColor = 'bg-yellow-100';
+                iconColor = 'text-yellow-600';
+            } else {
+                iconHtml = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>`;
+            }
+
+            item.innerHTML = `
+                <div class="w-8 h-8 ${bgColor} rounded-full flex items-center justify-center">
+                    ${iconHtml}
+                </div>
+                <div class="flex-1">
+                    <span class="font-medium">${user}</span> ${action}
+                    <span class="text-gray-400">• just now</span>
+                </div>
+            `;
+            feed.insertBefore(item, feed.firstChild);
+            
+            // Keep only last 10 items
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+        
+        // Simulate user cursors (only for the current user, or if you want to add generic "other user" cursors)
+        function simulateUserCursors() {
+            const cursorsContainer = document.getElementById('userCursors');
+            // Removed hardcoded Alex and Sarah cursors
+            // If you want to simulate other users, you'd need a more robust system
+            // For now, only the current user's cursor might be relevant if you implement it.
+        }
+        
+        // Initialize
+        saveCanvasState();
+        updateBrushPreview();
+        simulateUserCursors(); // This will now do nothing unless you add logic for your own cursor or generic "other" cursors.
+        
+        // Initial activity for the current user joining
+        addActivityFeedItem(userName, 'joined the session');
+
+        // Update user count periodically (can be simplified as only one user for now)
+        setInterval(() => {
+            document.getElementById('userCount').textContent = 1; // Always 1 for now, as only the current user is tracked
+        }, 5000);
+
+        // Update drawing user indicator (will always be "You" for now)
+        const drawingUserNameSpan = document.getElementById('drawingUserName');
+        const drawingUserIndicatorDiv = document.getElementById('drawingUserIndicator');
+        drawingUserNameSpan.textContent = userName + ' is drawing';
+        drawingUserIndicatorDiv.classList.remove('hidden'); // Show the indicator for the current user
+    </script>
+</body>
+</html>
